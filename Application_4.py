@@ -211,18 +211,18 @@ def generate_null_distribution(seq_x, seq_y, scoring_matrix, num_trials):
 
     return scoring_distribution
 
-null_human_fruitfly = generate_null_distribution(human_eyeless, fruitfly_eyeless, PAM50, 1500)
+null_human_fruitfly = generate_null_distribution(human_eyeless, fruitfly_eyeless, PAM50, 1000)
 print "Done generating distribution"
 print null_human_fruitfly
 
-normalized_n_h_f = {key: null_human_fruitfly[key] / 1500.0 for key in null_human_fruitfly}
+normalized_n_h_f = {key: null_human_fruitfly[key] / 1000.0 for key in null_human_fruitfly}
 print normalized_n_h_f
 
 
 def list_from_norm_dict(dict):
     full = []
     for key in dict:
-        full.extend([key]*int(dict[key]*1500))
+        full.extend([key]*int(dict[key]*1000))
 
     return full
 
@@ -244,14 +244,23 @@ def stdev(data, ddof=0):
     pvar = squares/(length-ddof)
     return pvar**0.5
 
+
+def z_score(score, average, standard_deviation):
+    return (score - average) / standard_deviation
+
+
 dist_list = list_from_norm_dict(normalized_n_h_f)
 print dist_list
 
-mu = mean(dist_list)
+avg = mean(dist_list)
 sigma = stdev(dist_list)
 
-print "Mean is ", mu
+print "Mean is ", avg
 print "Standard deviation is ", sigma
+print "Z-score is ", z_score(compute_local_alignment(human_eyeless, fruitfly_eyeless, PAM50,
+                                                     compute_alignment_matrix(human_eyeless, fruitfly_eyeless,
+                                                                              PAM50, False))[0],
+                             avg, sigma)
 
 
 plt.bar([key for key in normalized_n_h_f], [normalized_n_h_f[key] for key in normalized_n_h_f])
