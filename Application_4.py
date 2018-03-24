@@ -32,6 +32,31 @@ fruitfly_eyeless = load_protein('alg_FruitflyEyelessProtein.txt')
 PAM50 = load_scoring_matrix('alg_PAM50.txt')
 
 
+def build_scoring_matrix(alphabet, diag_score, off_diag_score, dash_score):
+    """
+    Creates scoring matrix based on input.
+    :param alphabet: set of letters
+    :param diag_score: score when letters are same
+    :param off_diag_score: score when letters are different
+    :param dash_score: score when letter matched with dash
+    :return: dictionary of dictionaries
+    """
+    matrix = {'-': {'-': dash_score}}
+
+    for letter in alphabet:
+        interior = {}
+        for other in alphabet:
+            if other == letter:
+                interior[other] = diag_score
+            else:
+                interior[other] = off_diag_score
+        interior['-'] = dash_score
+        matrix[letter] = interior
+        matrix['-'][letter] = dash_score
+
+    return matrix
+
+
 def compute_alignment_matrix(seq_x, seq_y, scoring_matrix, global_flag):
     """
     Computes alignment scores for input sequences.
@@ -83,6 +108,7 @@ def compute_global_alignment(seq_x, seq_y, scoring_matrix, alignment_matrix):
     """
     x_len, y_len = len(seq_x), len(seq_y)
     x_prime, y_prime = '', ''
+
     while x_len != 0 and y_len != 0:
         if alignment_matrix[x_len][y_len] == alignment_matrix[x_len-1][y_len-1] + \
                 scoring_matrix[seq_x[x_len-1]][seq_y[y_len-1]]:
@@ -163,18 +189,18 @@ def compute_local_alignment(seq_x, seq_y, scoring_matrix, alignment_matrix):
 
     return tuple([score, x_prime, y_prime])
 
-alignment = compute_alignment_matrix(human_eyeless, fruitfly_eyeless, PAM50, False)
-local_alignments = compute_local_alignment(human_eyeless, fruitfly_eyeless, PAM50, alignment)
+# alignment = compute_alignment_matrix(human_eyeless, fruitfly_eyeless, PAM50, False)
+# local_alignments = compute_local_alignment(human_eyeless, fruitfly_eyeless, PAM50, alignment)
 
 
 consensus_PAX_domain = load_protein('alg_ConsensusPAXDomain.txt')
-human_alignment = local_alignments[1].replace('-', '')
-h_alignment_matrix = compute_alignment_matrix(human_alignment, consensus_PAX_domain, PAM50, True)
-fruitfly_alignment = local_alignments[2].replace('-', '')
-f_alignment_matrix = compute_alignment_matrix(fruitfly_alignment, consensus_PAX_domain, PAM50, True)
-
-h_consensus_alignment = compute_global_alignment(human_alignment, consensus_PAX_domain, PAM50, h_alignment_matrix)
-f_consensus_alignment = compute_global_alignment(fruitfly_alignment, consensus_PAX_domain, PAM50, f_alignment_matrix)
+# human_alignment = local_alignments[1].replace('-', '')
+# h_alignment_matrix = compute_alignment_matrix(human_alignment, consensus_PAX_domain, PAM50, True)
+# fruitfly_alignment = local_alignments[2].replace('-', '')
+# f_alignment_matrix = compute_alignment_matrix(fruitfly_alignment, consensus_PAX_domain, PAM50, True)
+#
+# h_consensus_alignment = compute_global_alignment(human_alignment, consensus_PAX_domain, PAM50, h_alignment_matrix)
+# f_consensus_alignment = compute_global_alignment(fruitfly_alignment, consensus_PAX_domain, PAM50, f_alignment_matrix)
 
 
 def compare_similarity(str1, str2):
@@ -211,12 +237,12 @@ def generate_null_distribution(seq_x, seq_y, scoring_matrix, num_trials):
 
     return scoring_distribution
 
-null_human_fruitfly = generate_null_distribution(human_eyeless, fruitfly_eyeless, PAM50, 1000)
-print "Done generating distribution"
-print null_human_fruitfly
-
-normalized_n_h_f = {key: null_human_fruitfly[key] / 1000.0 for key in null_human_fruitfly}
-print normalized_n_h_f
+# null_human_fruitfly = generate_null_distribution(human_eyeless, fruitfly_eyeless, PAM50, 1000)
+# print "Done generating distribution"
+# print null_human_fruitfly
+#
+# normalized_n_h_f = {key: null_human_fruitfly[key] / 1000.0 for key in null_human_fruitfly}
+# print normalized_n_h_f
 
 
 def list_from_norm_dict(dict):
@@ -249,24 +275,55 @@ def z_score(score, average, standard_deviation):
     return (score - average) / standard_deviation
 
 
-dist_list = list_from_norm_dict(normalized_n_h_f)
-print dist_list
+# dist_list = list_from_norm_dict(normalized_n_h_f)
+# print dist_list
+#
+# avg = mean(dist_list)
+# sigma = stdev(dist_list)
+#
+# print "Mean is ", avg
+# print "Standard deviation is ", sigma
+# print "Z-score is ", z_score(compute_local_alignment(human_eyeless, fruitfly_eyeless, PAM50,
+#                                                      compute_alignment_matrix(human_eyeless, fruitfly_eyeless,
+#                                                                               PAM50, False))[0],
+#                              avg, sigma)
+#
+#
+# plt.bar([key for key in normalized_n_h_f], [normalized_n_h_f[key] for key in normalized_n_h_f])
+# plt.ylabel('Proportion of trials')
+# plt.xlabel('Score')
+# plt.title('Normalized Null Distribution of Human and Fruitfly Eyeless Proteins')
+# plt.show()
 
-avg = mean(dist_list)
-sigma = stdev(dist_list)
 
-print "Mean is ", avg
-print "Standard deviation is ", sigma
-print "Z-score is ", z_score(compute_local_alignment(human_eyeless, fruitfly_eyeless, PAM50,
-                                                     compute_alignment_matrix(human_eyeless, fruitfly_eyeless,
-                                                                              PAM50, False))[0],
-                             avg, sigma)
+def edit_distance(seq_x, seq_y, scoring_matrix, global_flag=True):
+    score = compute_global_alignment(seq_x, seq_y, scoring_matrix,
+                                     compute_alignment_matrix(seq_x, seq_y, scoring_matrix, global_flag))
+
+    return len(seq_x) + len(seq_y) - score[0]
 
 
-plt.bar([key for key in normalized_n_h_f], [normalized_n_h_f[key] for key in normalized_n_h_f])
-plt.ylabel('Proportion of trials')
-plt.xlabel('Score')
-plt.title('Normalized Null Distribution of Human and Fruitfly Eyeless Proteins')
-plt.show()
+def load_word_list(file_name):
+    words = []
+    with open(file_name, 'r') as f:
+        for line in f.readlines():
+            words.append(line.rstrip())
 
+    return words
+
+dictionary = load_word_list('assets_scrabble_words3.txt')
+
+
+def check_spelling(checked_word, dist, word_list):
+    scoring = build_scoring_matrix({'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q',
+                                    'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'}, 2, 1, 0)
+    possible = set([])
+    for word in word_list:
+        if edit_distance(checked_word, word, scoring) <= dist:
+            possible.add(word)
+
+    return possible
+
+print check_spelling('humble', 1, dictionary)
+print check_spelling('firefly', 2, dictionary)
 
